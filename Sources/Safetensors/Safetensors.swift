@@ -23,22 +23,22 @@ public enum Safetensors {
             .sorted {
                 $0.start < $1.start
             }
-        
+
         guard let first = allDataOffsets.first, let last = allDataOffsets.last else {
             throw SafetensorsError.metadataIncompleteBuffer
         }
-        
+
         if first.start != 0 || last.end != dataCount {
             throw SafetensorsError.metadataIncompleteBuffer
         }
-        
+
         for (first, second) in zip(allDataOffsets, allDataOffsets.dropFirst()) {
             if first.end != second.start {
                 throw SafetensorsError.metadataIncompleteBuffer
             }
         }
     }
-    
+
     ///  Read file at given URL and return `ParsedSafetensors` object.
     /// - Parameter url: file URL to read the data from
     /// - Returns: `ParsedSafetensors` object containing the decoded data
@@ -47,26 +47,22 @@ public enum Safetensors {
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
         return try decode(data)
     }
-    
+
     ///  Decode Data object to ParsedSafetensors object.
     /// - Parameter data: `Data` object containing the encoded data
     /// - Returns: `ParsedSafetensors` object containing the decoded data
     public static func decode(_ data: Data) throws -> ParsedSafetensors {
-        guard data.count >= MemoryLayout<Int>.size else {
-            throw SafetensorsError.invalidHeaderSize
-        }
+        let result = try HeaderDecoder.decode(data)
 
-        let result = try HeaderDecoder().decode(data)
-        
         try validate(header: result.header, dataCount: data.count - result.size)
-        
+
         return ParsedSafetensors(
             headerSize: result.size,
             headerData: result.header,
             rawData: data
         )
     }
-    
+
     ///  Save dictionary of `SafetensorsEncodable` values to file.
     /// - Parameters:
     ///   - data: dictionary of `SafetensorsEncodable` values
@@ -81,7 +77,7 @@ public enum Safetensors {
         let encodedData = try encode(data, metadata: metadata)
         try encodedData.write(to: url)
     }
-    
+
     ///  Encode dictionary of `SafetensorsEncodable` values to `Data` object.
     /// - Parameters:
     ///   - data: dictionary of `SafetensorsEncodable` values
@@ -94,19 +90,21 @@ public enum Safetensors {
         var headerData = ParsedSafetensors.HeaderData(
             minimumCapacity: data.count + (metadata == nil ? 0 : 1)
         )
-    
-        let totalDataSize = try data.values.reduce(0) { try $1.byteCount + $0 }
-        var tensorData: Data = .init(capacity: totalDataSize)
-        
+
+        let totalDataSize = try data.values.reduce(0) {
+            try $1.byteCount + $0
+        }
+        var tensorData = Data(capacity: totalDataSize)
+
         for (key, tensor) in data {
             headerData[key] = .tensorData(try tensor.tensorData(at: tensorData.count))
             tensorData.append(try tensor.toData())
         }
-        
+
         if let metadata {
             headerData["__metadata__"] = .metadata(metadata)
         }
 
-        return try HeaderEncoder().encode(headerData) + tensorData
+        return try HeaderEncoder.encode(headerData) + tensorData
     }
 }

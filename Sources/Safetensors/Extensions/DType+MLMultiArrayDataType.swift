@@ -1,10 +1,3 @@
-//
-//  DType+MLMultiArrayDataType.swift
-//  swift-safetensors
-//
-//  Created by Tomasz Stachowiak on 1.10.2024.
-//
-
 import CoreML
 
 extension DType {

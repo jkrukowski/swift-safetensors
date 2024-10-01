@@ -5,7 +5,7 @@
 //  Created by Tomasz Stachowiak on 1.10.2024.
 //
 
-public struct OffsetRange: Codable {
+public struct OffsetRange: Codable, Equatable {
     let start: Int
     let end: Int
 
@@ -15,7 +15,7 @@ public struct OffsetRange: Codable {
     }
 
     public init(from decoder: any Decoder) throws {
-        var container = try decoder.singleValueContainer()
+        let container = try decoder.singleValueContainer()
         let array = try container.decode([Int].self)
 
         precondition(array.count == 2, "range array needs to have exactly 2 elements")
@@ -26,11 +26,5 @@ public struct OffsetRange: Codable {
 
     public func encode(to encoder: any Encoder) throws {
         try [start, end].encode(to: encoder)
-    }
-}
-
-extension OffsetRange: Equatable {
-    public static func ==(lhs: OffsetRange, rhs: OffsetRange) -> Bool {
-        lhs.start == rhs.start && lhs.end == rhs.end
     }
 }

@@ -1,7 +1,3 @@
-//
-// Created by Tomasz Stachowiak on 1.10.2024.
-//
-
 import Foundation
 
 public enum HeaderElement {
@@ -33,7 +29,6 @@ extension HeaderElement: Codable {
         } else if let tensorData = try? container.decode(TensorData.self) {
             self = .tensorData(tensorData)
         } else {
-            try! container.decode(TensorData.self)
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(
                     codingPath: decoder.codingPath,

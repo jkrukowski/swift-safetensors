@@ -3,16 +3,20 @@ import Foundation
 
 extension MLMultiArray: SafetensorsEncodable {
     public var scalarCount: Int {
-        shape.reduce(1) { $0 * $1.intValue }
+        shape.reduce(1) {
+            $0 * $1.intValue
+        }
     }
     
     public var tensorShape: [Int] {
-        shape.map { $0.intValue }
+        shape.map {
+            $0.intValue
+        }
     }
     
     public var dtype: DType {
         get throws {
-            try .init(mlMultiArrayDataType: dataType)
+            try Dtype(mlMultiArrayDataType: dataType)
         }
     }
     
@@ -32,11 +36,11 @@ extension MLMultiArray: SafetensorsEncodable {
                 data(ofType: Int32.self)
 #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64)) && os
             case .float16:
-                guard #available(macOS 15.0, iOS 16.0, tvOS 16.0, watchOS 9.0, visionOS 1.0, *) else {
-                    fallthrough
+                if #available(macOS 15.0, iOS 16.0, tvOS 16.0, watchOS 9.0, visionOS 1.0, *) {
+                    data(ofType: Float16.self)
+                } else {
+                    throw SafetensorsError.unsupportedDataType(dataType.rawValue.description)
                 }
-                
-                data(ofType: Float16.self)
 #endif
             default:
                 throw SafetensorsError.unsupportedDataType(dataType.rawValue.description)

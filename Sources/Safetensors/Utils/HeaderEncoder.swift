@@ -8,14 +8,9 @@
 import Foundation
 
 struct HeaderEncoder {
-    private var jsonEncoder: JSONEncoder
-    
-    init() {
-        jsonEncoder = JSONEncoder()
+    static func encode(_ headerData: ParsedSafetensors.HeaderData) throws -> Data {
+        var jsonEncoder = JSONEncoder()
         jsonEncoder.keyEncodingStrategy = .convertToSnakeCase
-    }
-    
-    func encode(_ headerData: ParsedSafetensors.HeaderData) throws -> Data {
         let encodedHeader = try jsonEncoder.encode(headerData)
         return withUnsafeBytes(of: encodedHeader.count) {
             Data($0)

@@ -14,7 +14,7 @@ public protocol SafetensorsEncodable {
 
 extension SafetensorsEncodable {
     var byteCount: Int {
-        get throws{
+        get throws {
             try self.scalarSize * self.dtype.scalarSize
         }
     }
