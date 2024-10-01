@@ -15,7 +15,7 @@ import Testing
 
         #expect(testTensor.dtype == "I32")
         #expect(testTensor.shape == [2, 2])
-        #expect(testTensor.dataOffsets == [0, 16])
+        #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
         #expect(safeTensors.metadata == nil)
     }
 
@@ -30,7 +30,7 @@ import Testing
 
         #expect(testTensor.dtype == "I32")
         #expect(testTensor.shape == [2, 2])
-        #expect(testTensor.dataOffsets == [0, 16])
+        #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
         #expect(safeTensors.metadata == ["key1": "value1"])
     }
 
@@ -67,7 +67,7 @@ import Testing
 
         #expect(testTensor.dtype == "I32")
         #expect(testTensor.shape == [2, 2])
-        #expect(testTensor.dataOffsets == [0, 16])
+        #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
         let tensor = try safeTensors.mlTensor(forKey: "test")
         let array = await tensor.shapedArray(of: Int32.self)
         #expect(array.scalars == [0, 0, 0, 0])
@@ -104,7 +104,7 @@ import Testing
 
         #expect(testTensor.dtype == "I32")
         #expect(testTensor.shape == [])
-        #expect(testTensor.dataOffsets == [0, 4])
+        #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 4))
     }
 
     @Test func zeroSizeTensorAllowed() throws {
@@ -117,7 +117,7 @@ import Testing
 
         #expect(testTensor.dtype == "I32")
         #expect(testTensor.shape == [])
-        #expect(testTensor.dataOffsets == [0, 0])
+        #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 0))
     }
 
     @Test func dataTooShort() throws {

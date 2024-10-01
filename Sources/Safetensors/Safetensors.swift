@@ -66,12 +66,34 @@ extension HeaderElement: Codable {
     }
 }
 
+public struct OffsetRange: Equatable, Codable {
+    public let start: Int
+    public let end: Int
+
+    public init(start: Int, end: Int) {
+        self.start = start
+        self.end = end
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let array = try container.decode([Int].self)
+        precondition(array.count == 2, "Range array needs to have exactly 2 elements")
+        self.start = array[0]
+        self.end = array[1]
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try [start, end].encode(to: encoder)
+    }
+}
+
 public struct TensorData: Codable {
     public let dtype: String
     public let shape: [Int]
-    public let dataOffsets: [Int]
+    public let dataOffsets: OffsetRange
 
-    public init(dtype: String, shape: [Int], dataOffsets: [Int]) {
+    public init(dtype: String, shape: [Int], dataOffsets: OffsetRange) {
         self.dtype = dtype
         self.shape = shape
         self.dataOffsets = dataOffsets
@@ -108,8 +130,8 @@ public struct ParsedSafetensors {
     public func mlTensor(forKey key: String, noCopy: Bool = false) throws -> MLTensor {
         let tensorData = try tensorData(forKey: key)
         let scalarType = try MLTensor.toMLTensorScalarType(from: tensorData.dtype)
-        let startIndex = tensorData.dataOffsets[0] + headerOffset
-        let endIndex = tensorData.dataOffsets[1] + headerOffset
+        let startIndex = tensorData.dataOffsets.start + headerOffset
+        let endIndex = tensorData.dataOffsets.end + headerOffset
         let count = endIndex - startIndex
         if noCopy {
             return rawData.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) in
@@ -141,8 +163,8 @@ public struct ParsedSafetensors {
     public func mlMultiArray(forKey key: String, noCopy: Bool = false) throws -> MLMultiArray {
         let tensorData = try tensorData(forKey: key)
         let dataType = try MLMultiArray.toMLMultiArrayDataType(from: tensorData.dtype)
-        let startIndex = tensorData.dataOffsets[0] + headerOffset
-        let endIndex = tensorData.dataOffsets[1] + headerOffset
+        let startIndex = tensorData.dataOffsets.start + headerOffset
+        let endIndex = tensorData.dataOffsets.end + headerOffset
         let count = endIndex - startIndex
         var strides = [NSNumber]()
         var stride = 1
@@ -178,109 +200,114 @@ public struct ParsedSafetensors {
     }
 }
 
-///  Validate the header data and ensure that the tensor data is contiguous.
-/// - Parameters:
-///   - header: header data dictionary
-///   - dataCount: total size of the data buffer
-func validate(header: [String: HeaderElement], dataCount: Int) throws {
-    let allDataOffsets = header
-        .values
-        .compactMap { $0.tensorData?.dataOffsets }
-        .sorted { $0[0] < $1[0] }
-    guard let first = allDataOffsets.first, let last = allDataOffsets.last else {
-        throw SafetensorsError.metadataIncompleteBuffer
-    }
-    if first[0] != 0 || last[1] != dataCount {
-        throw SafetensorsError.metadataIncompleteBuffer
-    }
-    for (first, second) in zip(allDataOffsets, allDataOffsets.dropFirst()) {
-        if first[1] != second[0] {
+public enum Safetensors {
+    ///  Validate the header data and ensure that the tensor data is contiguous.
+    /// - Parameters:
+    ///   - header: header data dictionary
+    ///   - dataCount: total size of the data buffer
+    static func validate(header: [String: HeaderElement], dataCount: Int) throws {
+        let allDataOffsets = header
+            .values
+            .compactMap { $0.tensorData?.dataOffsets }
+            .sorted { $0.start < $1.start }
+        guard let first = allDataOffsets.first, let last = allDataOffsets.last else {
             throw SafetensorsError.metadataIncompleteBuffer
         }
-    }
-}
-
-///  Read a file at a given URL and return a `ParsedSafetensors` object.
-/// - Parameter url: file URL to read the data from
-/// - Returns: `ParsedSafetensors` object containing the decoded data
-public func read(at url: URL) throws -> ParsedSafetensors {
-    precondition(url.isFileURL, "URL must be a file URL")
-    let data = try Data(contentsOf: url, options: .mappedIfSafe)
-    return try decode(data)
-}
-
-///  Decode a `Data` object to a `ParsedSafetensors` object.
-/// - Parameter data: `Data` object containing the encoded data
-/// - Returns: `ParsedSafetensors` object containing the decoded data
-public func decode(_ data: Data) throws -> ParsedSafetensors {
-    guard data.count >= 8 else {
-        throw SafetensorsError.invalidHeaderSize
-    }
-    let (headerOffset, headerData) = try data[0..<8].withUnsafeBytes {
-        (ptr: UnsafeRawBufferPointer) in
-        let headerSize = ptr.load(as: Int.self)
-        guard data.count >= 8 + headerSize else {
-            throw SafetensorsError.invalidHeaderData
+        if first.start != 0 || last.end != dataCount {
+            throw SafetensorsError.metadataIncompleteBuffer
         }
-        let headerData = data[8..<8 + headerSize]
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let header = try decoder.decode([String: HeaderElement].self, from: headerData)
-        return (headerSize + 8, header)
+        for (first, second) in zip(allDataOffsets, allDataOffsets.dropFirst()) {
+            if first.end != second.start {
+                throw SafetensorsError.metadataIncompleteBuffer
+            }
+        }
     }
-    try validate(header: headerData, dataCount: data.count - headerOffset)
-    return ParsedSafetensors(
-        headerOffset: headerOffset,
-        headerData: headerData,
-        rawData: data
-    )
-}
 
-///  Save a dictionary of `SafetensorsEncodable` values to a file.
-/// - Parameters:
-///   - data: dictionary of `SafetensorsEncodable` values
-///   - metadata: optional metadata dictionary to include in the encoded data
-///   - url: file URL to save the data to
-public func write(
-    _ data: [String: any SafetensorsEncodable],
-    metadata: [String: String]? = nil,
-    to url: URL
-) throws {
-    precondition(url.isFileURL, "URL must be a file URL")
-    let encodedData = try encode(data, metadata: metadata)
-    try encodedData.write(to: url)
-}
+    ///  Read file at given URL and return `ParsedSafetensors` object.
+    /// - Parameter url: file URL to read the data from
+    /// - Returns: `ParsedSafetensors` object containing the decoded data
+    public static func read(at url: URL) throws -> ParsedSafetensors {
+        precondition(url.isFileURL, "URL must be a file URL")
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        return try decode(data)
+    }
 
-///  Encode a dictionary of `SafetensorsEncodable` values to a `Data` object.
-/// - Parameters:
-///   - data: dictionary of `SafetensorsEncodable` values
-///   - metadata: optional metadata dictionary to include in the encoded data
-/// - Returns: `Data` object containing the encoded data
-public func encode(
-    _ data: [String: any SafetensorsEncodable],
-    metadata: [String: String]? = nil
-) throws -> Data {
-    var headerData = [String: HeaderElement]()
-    headerData.reserveCapacity(data.count + (metadata == nil ? 0 : 1))
-    var previousOffset = 0
-    var tensorData = [UInt8]()
-    for (key, tensor) in data {
-        let tensorByteCount = try tensor.scalarSize() * tensor.scalarCount
-        let tensorHeaderData = try TensorData(
-            dtype: tensor.dtype(),
-            shape: tensor.tensorShape,
-            dataOffsets: [previousOffset, tensorByteCount + previousOffset]
+    ///  Decode Data object to ParsedSafetensors object.
+    /// - Parameter data: `Data` object containing the encoded data
+    /// - Returns: `ParsedSafetensors` object containing the decoded data
+    public static func decode(_ data: Data) throws -> ParsedSafetensors {
+        guard data.count >= 8 else {
+            throw SafetensorsError.invalidHeaderSize
+        }
+        let (headerOffset, headerData) = try data[0..<8].withUnsafeBytes {
+            (ptr: UnsafeRawBufferPointer) in
+            let headerSize = ptr.load(as: Int.self)
+            guard data.count >= 8 + headerSize else {
+                throw SafetensorsError.invalidHeaderData
+            }
+            let headerData = data[8..<8 + headerSize]
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            let header = try decoder.decode([String: HeaderElement].self, from: headerData)
+            return (headerSize + 8, header)
+        }
+        try validate(header: headerData, dataCount: data.count - headerOffset)
+        return ParsedSafetensors(
+            headerOffset: headerOffset,
+            headerData: headerData,
+            rawData: data
         )
-        previousOffset += tensorByteCount
-        headerData[key] = .tensorData(tensorHeaderData)
-        try tensorData.append(contentsOf: tensor.toData())
     }
-    if let metadata {
-        headerData["__metadata__"] = .metadata(metadata)
+
+    ///  Save dictionary of `SafetensorsEncodable` values to file.
+    /// - Parameters:
+    ///   - data: dictionary of `SafetensorsEncodable` values
+    ///   - metadata: optional metadata dictionary to include in the encoded data
+    ///   - url: file URL to save the data to
+    public static func write(
+        _ data: [String: any SafetensorsEncodable],
+        metadata: [String: String]? = nil,
+        to url: URL
+    ) throws {
+        precondition(url.isFileURL, "URL must be a file URL")
+        let encodedData = try encode(data, metadata: metadata)
+        try encodedData.write(to: url)
     }
-    let encoder = JSONEncoder()
-    encoder.keyEncodingStrategy = .convertToSnakeCase
-    let header = try encoder.encode(headerData)
-    let headerSize = withUnsafeBytes(of: UInt64(header.count)) { Data($0) }
-    return headerSize + header + Data(tensorData)
+
+    ///  Encode dictionary of `SafetensorsEncodable` values to `Data` object.
+    /// - Parameters:
+    ///   - data: dictionary of `SafetensorsEncodable` values
+    ///   - metadata: optional metadata dictionary to include in the encoded data
+    /// - Returns: `Data` object containing the encoded data
+    public static func encode(
+        _ data: [String: any SafetensorsEncodable],
+        metadata: [String: String]? = nil
+    ) throws -> Data {
+        var headerData = [String: HeaderElement]()
+        headerData.reserveCapacity(data.count + (metadata == nil ? 0 : 1))
+        var previousOffset = 0
+        var tensorData = [UInt8]()
+        for (key, tensor) in data {
+            let tensorByteCount = try tensor.scalarSize() * tensor.scalarCount
+            let tensorHeaderData = try TensorData(
+                dtype: tensor.dtype(),
+                shape: tensor.tensorShape,
+                dataOffsets: OffsetRange(
+                    start: previousOffset,
+                    end: tensorByteCount + previousOffset
+                )
+            )
+            previousOffset += tensorByteCount
+            headerData[key] = .tensorData(tensorHeaderData)
+            try tensorData.append(contentsOf: tensor.toData())
+        }
+        if let metadata {
+            headerData["__metadata__"] = .metadata(metadata)
+        }
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let header = try encoder.encode(headerData)
+        let headerSize = withUnsafeBytes(of: UInt64(header.count)) { Data($0) }
+        return headerSize + header + Data(tensorData)
+    }
 }
