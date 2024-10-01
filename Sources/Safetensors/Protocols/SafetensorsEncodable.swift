@@ -9,16 +9,13 @@ public protocol SafetensorsEncodable {
     var scalarCount: Int { get }
     var tensorShape: [Int] { get }
     var dtype: DType { get throws }
-    
-    var scalarSize: Int { get throws }
-    
     func toData() throws -> Data
 }
 
 extension SafetensorsEncodable {
     var byteCount: Int {
         get throws{
-            try self.scalarSize * self.scalarCount
+            try self.scalarSize * self.dtype.scalarSize
         }
     }
 }
@@ -33,5 +30,11 @@ extension SafetensorsEncodable {
                 end: offset + byteCount 
             )
         )
+    }
+    
+    var scalarSize: Int {
+        get throws {
+            try dtype.scalarSize
+        }
     }
 }
