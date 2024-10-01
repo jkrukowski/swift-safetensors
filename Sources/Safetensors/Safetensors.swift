@@ -32,10 +32,6 @@ public enum Safetensors {
             throw SafetensorsError.metadataIncompleteBuffer
         }
         
-        if zip(allDataOffsets, allDataOffsets.dropFirst()).contains(where: { $0.end != $1.start }) {
-            throw SafetensorsError.metadataIncompleteBuffer
-        }
-        
         for (first, second) in zip(allDataOffsets, allDataOffsets.dropFirst()) {
             if first.end != second.start {
                 throw SafetensorsError.metadataIncompleteBuffer
