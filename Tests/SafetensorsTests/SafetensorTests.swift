@@ -13,7 +13,7 @@ import Testing
         let safeTensors = try Safetensors.decode(data)
         let testTensor = try safeTensors.tensorData(forKey: "test")
 
-        #expect(testTensor.dtype == "I32")
+        #expect(testTensor.dtype == .int32)
         #expect(testTensor.shape == [2, 2])
         #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
         #expect(safeTensors.metadata == nil)
@@ -28,7 +28,7 @@ import Testing
         let safeTensors = try Safetensors.decode(data)
         let testTensor = try safeTensors.tensorData(forKey: "test")
 
-        #expect(testTensor.dtype == "I32")
+        #expect(testTensor.dtype == .int32)
         #expect(testTensor.shape == [2, 2])
         #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
         #expect(safeTensors.metadata == ["key1": "value1"])
@@ -65,7 +65,7 @@ import Testing
         let safeTensors = try Safetensors.read(at: fileUrl)
         let testTensor: TensorData = try safeTensors.tensorData(forKey: "test")
 
-        #expect(testTensor.dtype == "I32")
+        #expect(testTensor.dtype == .int32)
         #expect(testTensor.shape == [2, 2])
         #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
         let tensor = try safeTensors.mlTensor(forKey: "test")
@@ -102,7 +102,7 @@ import Testing
         let safeTensors = try Safetensors.decode(data)
         let testTensor = try safeTensors.tensorData(forKey: "test")
 
-        #expect(testTensor.dtype == "I32")
+        #expect(testTensor.dtype == .int32)
         #expect(testTensor.shape == [])
         #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 4))
     }
@@ -115,7 +115,7 @@ import Testing
         let safeTensors = try Safetensors.decode(data)
         let testTensor = try safeTensors.tensorData(forKey: "test")
 
-        #expect(testTensor.dtype == "I32")
+        #expect(testTensor.dtype == .int32)
         #expect(testTensor.shape == [])
         #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 0))
     }
