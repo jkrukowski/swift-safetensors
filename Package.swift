@@ -12,6 +12,12 @@ let package = Package(
         .watchOS(.v9),
         .visionOS(.v1),
     ],
+    products: [
+        .library(
+            name: "Safetensors",
+            targets: ["Safetensors"]
+        )
+    ],
     targets: [
         .target(
             name: "Safetensors"
