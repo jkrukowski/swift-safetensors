@@ -56,3 +56,11 @@ let data: [String: any SafetensorsEncodable] = [
 
 try Safetensors.write(data, to: URL(filePath: "path/to/file.safetensors"))
 ```
+
+## Code Formatting
+
+This project uses [swift-format](https://github.com/swiftlang/swift-format). To format the code run:
+
+```bash
+swift-format format . -i -r --configuration .swift-format
+```
