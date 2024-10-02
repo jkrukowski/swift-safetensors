@@ -1,7 +1,9 @@
 import CoreML
 import Foundation
 
-/// Protocol for types that can be encoded to a `Data` object.
+public enum Safetensors {}
+
+/// Protocol for types that can be encoded to a `Data` in `Safetensors` format.
 public protocol SafetensorsEncodable {
     var scalarCount: Int { get }
     var tensorShape: [Int] { get }
@@ -63,28 +65,6 @@ extension HeaderElement: Codable {
         case .tensorData(let tensorData):
             try container.encode(tensorData)
         }
-    }
-}
-
-public struct OffsetRange: Equatable, Codable {
-    public let start: Int
-    public let end: Int
-
-    public init(start: Int, end: Int) {
-        self.start = start
-        self.end = end
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let array = try container.decode([Int].self)
-        precondition(array.count == 2, "Range array needs to have exactly 2 elements")
-        self.start = array[0]
-        self.end = array[1]
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        try [start, end].encode(to: encoder)
     }
 }
 
@@ -200,11 +180,11 @@ public struct ParsedSafetensors {
     }
 }
 
-public enum Safetensors {
+extension Safetensors {
     ///  Validate the header data and ensure that the tensor data is contiguous.
     /// - Parameters:
     ///   - header: header data dictionary
-    ///   - dataCount: total size of the data buffer
+    ///   - dataCount: total size of the data buffer, excluding header
     static func validate(header: [String: HeaderElement], dataCount: Int) throws {
         let allDataOffsets = header
             .values
@@ -222,7 +202,9 @@ public enum Safetensors {
             }
         }
     }
+}
 
+extension Safetensors {
     ///  Read file at given URL and return `ParsedSafetensors` object.
     /// - Parameter url: file URL to read the data from
     /// - Returns: `ParsedSafetensors` object containing the decoded data
@@ -239,18 +221,17 @@ public enum Safetensors {
         guard data.count >= 8 else {
             throw SafetensorsError.invalidHeaderSize
         }
-        let (headerOffset, headerData) = try data[0..<8].withUnsafeBytes {
-            (ptr: UnsafeRawBufferPointer) in
-            let headerSize = ptr.load(as: Int.self)
-            guard data.count >= 8 + headerSize else {
-                throw SafetensorsError.invalidHeaderData
-            }
-            let headerData = data[8..<8 + headerSize]
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            let header = try decoder.decode([String: HeaderElement].self, from: headerData)
-            return (headerSize + 8, header)
+        let headerOffset = data[0..<8].withUnsafeBytes { ptr in
+            let headerSize = ptr.load(as: UInt64.self)
+            return Int(headerSize) + 8
         }
+        guard data.count >= headerOffset else {
+            throw SafetensorsError.invalidHeaderData
+        }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let headerData = try decoder.decode(
+            [String: HeaderElement].self, from: data[8..<headerOffset])
         try validate(header: headerData, dataCount: data.count - headerOffset)
         return ParsedSafetensors(
             headerOffset: headerOffset,
