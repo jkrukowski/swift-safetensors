@@ -125,6 +125,6 @@ extension Safetensors {
         encoder.keyEncodingStrategy = .convertToSnakeCase
         let header = try encoder.encode(headerData)
         let headerSize = withUnsafeBytes(of: UInt64(header.count)) { Data($0) }
-        return headerSize + header + Data(tensorData)
+        return headerSize + header + tensorData
     }
 }
