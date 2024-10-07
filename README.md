@@ -11,7 +11,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/jkrukowski/swift-safetensors", from: "0.0.2")
+    .package(url: "https://github.com/jkrukowski/swift-safetensors", from: "0.0.4")
 ]
 ```
 
