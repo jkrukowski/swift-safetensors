@@ -52,7 +52,7 @@ extension MLMultiArray: SafetensorsEncodable {
             return withUnsafeBufferPointer(ofType: Float32.self) { ptr in
                 Data(buffer: ptr)
             }
-        #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+        #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64)) && swift(>=6.0)
             case .float16:
                 if #available(macOS 15.0, iOS 16.0, tvOS 16.0, watchOS 9.0, visionOS 1.0, *) {
                     return withUnsafeBufferPointer(ofType: Float16.self) { ptr in
@@ -67,7 +67,7 @@ extension MLMultiArray: SafetensorsEncodable {
             return withUnsafeBufferPointer(ofType: Int32.self) { ptr in
                 Data(buffer: ptr)
             }
-        @unknown default:
+        default:
             throw Safetensors.Error.unsupportedDataType(String(describing: dataType.rawValue))
         }
     }
