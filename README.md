@@ -25,13 +25,19 @@ import Safetensors
 let parsedSafetensors = try Safetensors.read(at: URL(filePath: "path/to/file.safetensors"))
 
 // get MLTensor
-let mlTensor = try parsedSafetensors.mlTensor(forKey: "tensorKey")
+let mlTensor = try parsedSafetensors.mlTensor(
+    forKey: "tensorKey"
+)
 
 // get MLMultiArray
-let mlMultiArray = try parsedSafetensors.mlMultiArray(forKey: "tensorKey")
+let mlMultiArray = try parsedSafetensors.mlMultiArray(
+    forKey: "tensorKey"
+)
 
 // get MLShapedArray
-let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(forKey: "tensorKey")
+let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(
+    forKey: "tensorKey"
+)
 ```
 
 When `MLTensor` or `MLMultiArray` is materialized, the data is copied from the underlying buffer.
@@ -39,13 +45,22 @@ If you want to avoid copying, you can do:
 
 ```swift
 // get MLTensor without copying data
-let mlTensor = try parsedSafetensors.mlTensor(forKey: "tensorKey", noCopy: true)
+let mlTensor = try parsedSafetensors.mlTensor(
+    forKey: "tensorKey",
+    noCopy: true
+)
 
 // get MLMultiArray without copying data
-let mlMultiArray = try parsedSafetensors.mlMultiArray(forKey: "tensorKey", noCopy: true)
+let mlMultiArray = try parsedSafetensors.mlMultiArray(
+    forKey: "tensorKey",
+    noCopy: true
+)
 
 // get MLShapedArray without copying data
-let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(forKey: "tensorKey", noCopy: true)
+let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(
+    forKey: "tensorKey",
+    noCopy: true
+)
 ```
 
 But make sure that the `ParsedSafetensors` object is not deallocated before you finish using the `MLTensor`, `MLMultiArray` or `MLShapedArray`.
