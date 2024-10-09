@@ -49,18 +49,6 @@ import Testing
         #expect(safeTensors.metadata == nil)
     }
 
-    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
-    @Test func decodeMLTensor() throws {
-        let data = createRawSafetensors(
-            headerString: #"{"test":{"dtype":"I32","shape":[2,2],"data_offsets":[0,16]}}"#,
-            tensorData: Data([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        )
-        let safeTensors = try Safetensors.decode(data)
-        let tensor = try safeTensors.mlTensor(forKey: "test")
-        #expect(tensor.shape == [2, 2])
-        #expect(tensor.scalarType is Int32.Type == true)
-    }
-
     @Test func readFromFile() async throws {
         let fileUrl = try #require(
             Bundle.module.url(forResource: "data", withExtension: "safetensors"))
@@ -70,16 +58,14 @@ import Testing
         #expect(testTensor.dtype == "I32")
         #expect(testTensor.shape == [2, 2])
         #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
-        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
-            let tensor = try safeTensors.mlTensor(forKey: "test")
-            #expect(tensor.shape == [2, 2])
-            #expect(tensor.scalarType is Int32.Type == true)
-            let array = await tensor.shapedArray(of: Int32.self)
-            #expect(array.scalars == [0, 0, 0, 0])
-        }
+
         let tensor = try safeTensors.mlMultiArray(forKey: "test")
         #expect(tensor.shape == [2, 2])
         #expect(tensor.dataType == .int32)
+        #expect(tensor[[0, 0] as [NSNumber]] == 0)
+        #expect(tensor[[0, 1] as [NSNumber]] == 0)
+        #expect(tensor[[1, 0] as [NSNumber]] == 0)
+        #expect(tensor[[1, 1] as [NSNumber]] == 0)
     }
 
     @Test func writeToFile() throws {

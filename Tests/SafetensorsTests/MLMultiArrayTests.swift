@@ -26,7 +26,7 @@ import Testing
         #expect(try array3.scalarSize == 4)
         #expect(try array3.dtype == "F32")
 
-        let array4 = MLShapedArray<Float64>(repeating: 1, shape: [2, 3])
+        let array4 = MLMultiArray(MLShapedArray<Float64>(repeating: 1, shape: [2, 3]))
         #expect(array4.tensorScalarCount == 2 * 3)
         #expect(array4.tensorShape == [2, 3])
         #expect(try array4.scalarSize == 8)

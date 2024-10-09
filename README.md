@@ -29,6 +29,9 @@ let mlTensor = try parsedSafetensors.mlTensor(forKey: "tensorKey")
 
 // get MLMultiArray
 let mlMultiArray = try parsedSafetensors.mlMultiArray(forKey: "tensorKey")
+
+// get MLShapedArray
+let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(forKey: "tensorKey")
 ```
 
 When `MLTensor` or `MLMultiArray` is materialized, the data is copied from the underlying buffer.
@@ -40,9 +43,12 @@ let mlTensor = try parsedSafetensors.mlTensor(forKey: "tensorKey", noCopy: true)
 
 // get MLMultiArray without copying data
 let mlMultiArray = try parsedSafetensors.mlMultiArray(forKey: "tensorKey", noCopy: true)
+
+// get MLShapedArray without copying data
+let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(forKey: "tensorKey", noCopy: true)
 ```
 
-But make sure that the `ParsedSafetensors` object is not deallocated before you finish using the `MLTensor` or `MLMultiArray`.
+But make sure that the `ParsedSafetensors` object is not deallocated before you finish using the `MLTensor`, `MLMultiArray` or `MLShapedArray`.
 
 ### Write `Safetensors` file
 
