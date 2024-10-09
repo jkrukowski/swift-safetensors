@@ -9,6 +9,7 @@ extension Safetensors {
         case invalidHeaderData
         case missingTensorData
         case unsupportedDataType(String)
+        case dataTypeMismatch
         case metadataIncompleteBuffer
     }
 }
@@ -101,13 +102,15 @@ extension Safetensors {
     ) throws -> Data {
         var headerData = [String: HeaderElement]()
         headerData.reserveCapacity(data.count + (metadata == nil ? 0 : 1))
-        let dataBytesCount = try data.values.reduce(0) { try $0 + $1.scalarSize() * $1.scalarCount }
+        let dataBytesCount = try data.values.reduce(0) {
+            try $0 + $1.scalarSize * $1.tensorScalarCount
+        }
         var tensorData = Data(capacity: dataBytesCount)
         var previousOffset = 0
         for (key, tensor) in data {
-            let tensorByteCount = try tensor.scalarSize() * tensor.scalarCount
+            let tensorByteCount = try tensor.scalarSize * tensor.tensorScalarCount
             let tensorHeaderData = try TensorData(
-                dtype: tensor.dtype(),
+                dtype: tensor.dtype,
                 shape: tensor.tensorShape,
                 dataOffsets: OffsetRange(
                     start: previousOffset,

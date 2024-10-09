@@ -8,27 +8,27 @@ import Foundation
     extension MLTensor {
         static func toMLTensorScalarType(from dtype: String) throws -> MLTensorScalar.Type {
             switch dtype {
-            case "F32":
+            case Constants.DataType.float32:
                 return Float32.self
-            case "F16":
+            case Constants.DataType.float16:
                 #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
                     return Float16.self
                 #else
                     throw Safetensors.Error.unsupportedDataType(dtype)
                 #endif
-            case "I32":
+            case Constants.DataType.int32:
                 return Int32.self
-            case "U32":
+            case Constants.DataType.uint32:
                 return UInt32.self
-            case "I16":
+            case Constants.DataType.int16:
                 return Int16.self
-            case "U16":
+            case Constants.DataType.uint16:
                 return UInt16.self
-            case "I8":
+            case Constants.DataType.int8:
                 return Int8.self
-            case "U8":
+            case Constants.DataType.uint8:
                 return UInt8.self
-            case "BOOL":
+            case Constants.DataType.bool:
                 return Bool.self
             default:
                 throw Safetensors.Error.unsupportedDataType(dtype)
