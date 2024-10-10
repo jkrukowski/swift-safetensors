@@ -11,7 +11,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/jkrukowski/swift-safetensors", from: "0.0.5")
+    .package(url: "https://github.com/jkrukowski/swift-safetensors", from: "0.0.6")
 ]
 ```
 
@@ -22,7 +22,9 @@ dependencies: [
 ```swift
 import Safetensors
 
-let parsedSafetensors = try Safetensors.read(at: URL(filePath: "path/to/file.safetensors"))
+let parsedSafetensors = try Safetensors.read(
+    at: URL(filePath: "path/to/file.safetensors")
+)
 
 // get MLTensor
 let mlTensor = try parsedSafetensors.mlTensor(
@@ -40,7 +42,7 @@ let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(
 )
 ```
 
-When `MLTensor` or `MLMultiArray` is materialized, the data is copied from the underlying buffer.
+When `MLTensor`, `MLMultiArray` or `MLShapedArray` is materialized, the data is copied from the underlying buffer.
 If you want to avoid copying, you can do:
 
 ```swift
@@ -63,7 +65,8 @@ let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(
 )
 ```
 
-But make sure that the `ParsedSafetensors` object is not deallocated before you finish using the `MLTensor`, `MLMultiArray` or `MLShapedArray`.
+But make sure that the `ParsedSafetensors` object is not deallocated before you
+finish using the `MLTensor`, `MLMultiArray` or `MLShapedArray`.
 
 ### Write `Safetensors` file
 
@@ -71,11 +74,15 @@ But make sure that the `ParsedSafetensors` object is not deallocated before you 
 import Safetensors
 
 let data: [String: any SafetensorsEncodable] = [
-    "test1": MLMultiArray(MLShapedArray<Int32>(repeating: 1, shape: [2, 2])),
-    "test2": MLMultiArray(MLShapedArray<Int32>(repeating: 2, shape: [9])),
+    "test1": MLShapedArray<Int32>(repeating: 1, shape: [2, 2]),
+    "test2": MLShapedArray<Float32>(repeating: 2, shape: [9]),
 ]
 
-try Safetensors.write(data, to: URL(filePath: "path/to/file.safetensors"))
+try Safetensors.write(
+    data,
+    metadata: ["key1": "value1", "key2": "value2"],
+    to: URL(filePath: "path/to/file.safetensors")
+)
 ```
 
 ## Code Formatting
