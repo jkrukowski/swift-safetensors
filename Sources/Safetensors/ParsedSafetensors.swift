@@ -26,7 +26,7 @@ public struct ParsedSafetensors {
 
     public func tensorData(forKey key: String) throws -> TensorData {
         guard let tensorData = headerData[key]?.tensorData else {
-            throw Safetensors.Error.missingTensorData
+            throw Safetensors.Error.missingTensorDataForKey(key)
         }
         return tensorData
     }

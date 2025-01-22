@@ -7,7 +7,7 @@ extension Safetensors {
     public enum Error: Swift.Error {
         case invalidHeaderSize
         case invalidHeaderData
-        case missingTensorData
+        case missingTensorDataForKey(String)
         case unsupportedDataType(String)
         case dataTypeMismatch
         case metadataIncompleteBuffer
