@@ -74,15 +74,11 @@
                 "test1": MLMultiArray(MLShapedArray<Int32>(repeating: 1, shape: [2, 2])),
                 "test2": MLMultiArray(MLShapedArray<Int32>(repeating: 2, shape: [9])),
             ]
-            let temporaryDirectoryURL = URL(
-                fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-            let temporaryFileURL = temporaryDirectoryURL.appendingPathComponent("data.safetensors")
-            try Safetensors.write(data, to: temporaryFileURL)
+            let fileURL = try writeToTemporaryFile("data.safetensors", data: data)
             defer {
-                try? FileManager.default.removeItem(at: temporaryFileURL)
+                try? FileManager.default.removeItem(at: fileURL)
             }
-
-            #expect(FileManager.default.fileExists(atPath: temporaryFileURL.path))
+            #expect(FileManager.default.fileExists(atPath: fileURL.path))
         }
 
         @Test func decodeEmpty() throws {

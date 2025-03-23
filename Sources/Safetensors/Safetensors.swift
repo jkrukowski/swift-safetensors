@@ -48,6 +48,29 @@ extension Safetensors {
         return try decode(data)
     }
 
+    /// Read index file (usually it's called 'model.safetensors.index.json') at given URL and return `ParsedSafetensorsIndex` object.
+    /// - Parameter url: file URL to read the data from
+    /// - Returns: `ParsedSafetensorsIndex` object containing the decoded data
+    public static func readFromIndex(at url: URL) throws -> ParsedSafetensorsIndex {
+        precondition(url.isFileURL, "URL must be a file URL")
+        let data = try Data(contentsOf: url)
+        let indexData = try decodeIndex(data)
+        return ParsedSafetensorsIndex(
+            metadata: indexData.metadata,
+            weightMap: indexData.weightMap,
+            baseURL: url.deletingLastPathComponent()
+        )
+    }
+
+    /// Decode Data object to `ParsedSafetensorsIndexData` object.
+    /// - Parameter data: `Data` object containing the encoded data
+    /// - Returns: `ParsedSafetensorsIndexData` object containing the decoded data
+    public static func decodeIndex(_ data: Data) throws -> ParsedSafetensorsIndexData {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(ParsedSafetensorsIndexData.self, from: data)
+    }
+
     ///  Decode Data object to ParsedSafetensors object.
     /// - Parameter data: `Data` object containing the encoded data
     /// - Returns: `ParsedSafetensors` object containing the decoded data
@@ -81,14 +104,50 @@ extension Safetensors {
     ///   - data: dictionary of `SafetensorsEncodable` values
     ///   - metadata: optional metadata dictionary to include in the encoded data
     ///   - url: file URL to save the data to
+    ///   - maxShardSizeInBytes: optional maximum size of each shard in bytes
     public static func write(
         _ data: [String: any SafetensorsEncodable],
         metadata: [String: String]? = nil,
-        to url: URL
+        to url: URL,
+        maxShardSizeInBytes: Int? = nil
     ) throws {
         precondition(url.isFileURL, "URL must be a file URL")
-        let encodedData = try encode(data, metadata: metadata)
-        try encodedData.write(to: url)
+        if let maxShardSizeInBytes {
+            precondition(maxShardSizeInBytes > 0, "Maximum shard size must be greater than 0")
+            let groups = try groupsForSharding(data, maxShardSizeInBytes: maxShardSizeInBytes)
+            let directoryURL = url.deletingLastPathComponent()
+            let baseFileName = url.deletingPathExtension().lastPathComponent
+            let fileExtension = url.pathExtension
+            var totalSize = 0
+            var weightMap = [String: String]()
+            var shardSuffix = "\(groups.count)"
+            if shardSuffix.count < 5 {
+                shardSuffix = shardSuffix.zfill(5)
+            }
+            for (index, group) in groups.enumerated() {
+                let encodedData = try encode(group, metadata: metadata)
+                let shardPrefix = "\(index + 1)".zfill(shardSuffix.count)
+                let shardFileName =
+                    "\(baseFileName)-\(shardPrefix)-of-\(shardSuffix).\(fileExtension)"
+                try encodedData.write(to: directoryURL.appendingPathComponent(shardFileName))
+                for (weightKey, value) in group {
+                    weightMap[weightKey] = shardFileName
+                    totalSize += try value.tensorByteCount
+                }
+            }
+            let modelIndex = ParsedSafetensorsIndexData(
+                metadata: ParsedSafetensorsIndexData.Metadata(totalSize: totalSize),
+                weightMap: weightMap
+            )
+            let encoder = JSONEncoder()
+            encoder.keyEncodingStrategy = .convertToSnakeCase
+            let encodedIndex = try encoder.encode(modelIndex)
+            try encodedIndex.write(
+                to: directoryURL.appendingPathComponent("\(baseFileName).index.json"))
+        } else {
+            let encodedData = try encode(data, metadata: metadata)
+            try encodedData.write(to: url)
+        }
     }
 
     ///  Encode dictionary of `SafetensorsEncodable` values to `Data` object.
@@ -108,7 +167,7 @@ extension Safetensors {
         var tensorData = Data(capacity: dataBytesCount)
         var previousOffset = 0
         for (key, tensor) in data {
-            let tensorByteCount = try tensor.scalarSize * tensor.tensorScalarCount
+            let tensorByteCount = try tensor.tensorByteCount
             let tensorHeaderData = try TensorData(
                 dtype: tensor.dtype,
                 shape: tensor.tensorShape,
@@ -130,4 +189,34 @@ extension Safetensors {
         let headerSize = withUnsafeBytes(of: UInt64(header.count)) { Data($0) }
         return headerSize + header + tensorData
     }
+}
+
+func groupsForSharding(
+    _ data: [String: any SafetensorsEncodable],
+    maxShardSizeInBytes: Int
+) throws -> [[String: any SafetensorsEncodable]] {
+    let sortedData = try data.sorted { try $0.value.tensorByteCount > $1.value.tensorByteCount }
+    var groups = [[String: any SafetensorsEncodable]]()
+    var currentGroup = [String: any SafetensorsEncodable]()
+    var currentSize = 0
+    for item in sortedData {
+        let tensorByteCount = try item.value.tensorByteCount
+        if tensorByteCount > maxShardSizeInBytes {
+            // If this tensor is larger than max shard size, it gets its own group
+            groups.append([item.key: item.value])
+            currentGroup = [:]
+            currentSize = 0
+        } else if currentSize + tensorByteCount > maxShardSizeInBytes {
+            groups.append(currentGroup)
+            currentGroup = [item.key: item.value]
+            currentSize = tensorByteCount
+        } else {
+            currentGroup[item.key] = item.value
+            currentSize += tensorByteCount
+        }
+    }
+    if !currentGroup.isEmpty {
+        groups.append(currentGroup)
+    }
+    return groups
 }

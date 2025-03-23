@@ -1,4 +1,3 @@
-import CoreML
 import Foundation
 
 public struct ParsedSafetensors {

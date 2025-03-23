@@ -36,3 +36,17 @@ func toMLMultiArrayDataType(from dtype: String) throws -> MLMultiArrayDataType {
         throw Safetensors.Error.unsupportedDataType(dtype)
     }
 }
+
+extension String {
+    func zfill(_ width: Int) -> String {
+        if self.count >= width {
+            return self
+        }
+        let zerosNeeded = width - self.count
+        if self.hasPrefix("-") {
+            return "-" + String(repeating: "0", count: zerosNeeded) + self.dropFirst()
+        } else {
+            return String(repeating: "0", count: zerosNeeded) + self
+        }
+    }
+}

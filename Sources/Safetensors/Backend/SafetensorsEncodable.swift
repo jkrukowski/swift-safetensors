@@ -6,6 +6,15 @@ public protocol SafetensorsEncodable {
     var tensorShape: [Int] { get }
     var dtype: String { get throws }
     var scalarSize: Int { get throws }
+    var tensorByteCount: Int { get throws }
 
     func toData() throws -> Data
+}
+
+extension SafetensorsEncodable {
+    public var tensorByteCount: Int {
+        get throws {
+            try scalarSize * tensorScalarCount
+        }
+    }
 }
