@@ -1,5 +1,58 @@
-import CoreML
 import Foundation
+
+#if canImport(CoreML)
+    import CoreML
+
+    func toMLMultiArrayDataType(from dtype: String) throws -> MLMultiArrayDataType {
+        switch dtype {
+        case Constants.DataType.float64:
+            return .float64
+        case Constants.DataType.float32:
+            return .float32
+        case Constants.DataType.float16:
+            #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+                return .float16
+            #else
+                throw Safetensors.Error.unsupportedDataType(dtype)
+            #endif
+        case Constants.DataType.int32:
+            return .int32
+        default:
+            throw Safetensors.Error.unsupportedDataType(dtype)
+        }
+    }
+#endif
+
+func toArrayDataType(from dtype: String) throws -> Any.Type {
+    switch dtype {
+    case Constants.DataType.float64:
+        return Double.self
+    case Constants.DataType.float32:
+        return Float.self
+    case Constants.DataType.float16:
+        #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+            return Float16.self
+        #else
+            throw Safetensors.Error.unsupportedDataType(dtype)
+        #endif
+    case Constants.DataType.int32:
+        return Int32.self
+    case Constants.DataType.uint32:
+        return UInt32.self
+    case Constants.DataType.int16:
+        return Int16.self
+    case Constants.DataType.uint16:
+        return UInt16.self
+    case Constants.DataType.int8:
+        return Int8.self
+    case Constants.DataType.uint8:
+        return UInt8.self
+    case Constants.DataType.bool:
+        return Bool.self
+    default:
+        throw Safetensors.Error.unsupportedDataType(dtype)
+    }
+}
 
 enum Constants {
     static let metadataKey = "__metadata__"
@@ -15,25 +68,6 @@ enum Constants {
         static let int8 = "I8"
         static let uint8 = "U8"
         static let bool = "BOOL"
-    }
-}
-
-func toMLMultiArrayDataType(from dtype: String) throws -> MLMultiArrayDataType {
-    switch dtype {
-    case Constants.DataType.float64:
-        return .float64
-    case Constants.DataType.float32:
-        return .float32
-    case Constants.DataType.float16:
-        #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
-            return .float16
-        #else
-            throw Safetensors.Error.unsupportedDataType(dtype)
-        #endif
-    case Constants.DataType.int32:
-        return .int32
-    default:
-        throw Safetensors.Error.unsupportedDataType(dtype)
     }
 }
 

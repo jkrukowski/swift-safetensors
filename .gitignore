@@ -9,3 +9,4 @@ DerivedData/
 .netrc
 /.vscode
 default.profraw
+/.claude

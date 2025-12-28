@@ -11,7 +11,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/jkrukowski/swift-safetensors", from: "0.0.6")
+    .package(url: "https://github.com/jkrukowski/swift-safetensors", from: "0.0.8")
 ]
 ```
 
@@ -40,10 +40,19 @@ let mlMultiArray = try parsedSafetensors.mlMultiArray(
 let mlShapedArray: MLShapedArray<Int32> = try parsedSafetensors.mlShapedArray(
     forKey: "tensorKey"
 )
+
+// get Swift Array (any numeric type)
+let floatArray: [Float] = try parsedSafetensors.array(forKey: "tensorKey")
+let int32Array: [Int32] = try parsedSafetensors.array(forKey: "tensorKey")
+let doubleArray: [Double] = try parsedSafetensors.array(forKey: "tensorKey")
+
+// get InlineArray (Swift 6.2+, requires macOS 26.0+)
+let inlineArray: InlineArray<4, Float> = try parsedSafetensors.inlineArray(forKey: "tensorKey")
 ```
 
-When `MLTensor`, `MLMultiArray` or `MLShapedArray` is materialized, the data is copied from the underlying buffer.
-If you want to avoid copying, you can do:
+When `MLTensor`, `MLMultiArray` or `MLShapedArray` is materialized, the data is copied from the underlying buffer by default. If you want to avoid copying, you can use the `noCopy` parameter:
+
+**Note:** Swift `Array` and `InlineArray` always own their data, so zero-copy access is not available for these types.
 
 ```swift
 // get MLTensor without copying data

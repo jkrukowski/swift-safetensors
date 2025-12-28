@@ -1,9 +1,9 @@
-import CoreML
-import Foundation
+#if canImport(CoreML) && swift(>=6)
+    import CoreML
+    import Foundation
 
-// NOTE: Right now `MLTensor` does not conform to `SafetensorsEncodable`.
+    // NOTE: Right now `MLTensor` does not conform to `SafetensorsEncodable`.
 
-#if swift(>=6)
     @available(macOS 15.0, macCatalyst 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
     extension MLTensor {
         static func toMLTensorScalarType(from dtype: String) throws -> MLTensorScalar.Type {

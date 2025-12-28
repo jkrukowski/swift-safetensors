@@ -1,4 +1,4 @@
-#if canImport(Testing)
+#if canImport(Testing) && canImport(CoreML)
     import CoreML
     import Foundation
     import Testing
@@ -33,8 +33,7 @@
             )
 
             #expect(decoded.metadata == ["key1": "value1", "key2": "value2"])
-            let mlTensor1 = try #require(
-                try decoded.mlTensor(forKey: "test1"))
+            let mlTensor1 = try decoded.mlTensor(forKey: "test1")
             #expect(mlTensor1.shape == [2, 2])
             #expect(mlTensor1.scalarCount == 4)
             #expect(mlTensor1.scalarType is Int32.Type == true)
@@ -43,7 +42,7 @@
             #expect(await mlTensor1[1, 0].shapedArray(of: Int32.self).scalars == [3])
             #expect(await mlTensor1[1, 1].shapedArray(of: Int32.self).scalars == [4])
 
-            let mlTensor2 = try #require(try decoded.mlTensor(forKey: "test2"))
+            let mlTensor2 = try decoded.mlTensor(forKey: "test2")
             #expect(mlTensor2.shape == [5])
             #expect(mlTensor2.scalarCount == 5)
             #expect(mlTensor2.scalarType is Float32.Type == true)

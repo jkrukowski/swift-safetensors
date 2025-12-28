@@ -1,4 +1,4 @@
-#if canImport(Testing)
+#if canImport(Testing) && canImport(CoreML)
     import CoreML
     import Foundation
     import Testing
@@ -61,8 +61,7 @@
             )
 
             #expect(decoded.metadata == ["key1": "value1", "key2": "value2"])
-            let mlMultiArray1 = try #require(
-                try decoded.mlMultiArray(forKey: "test1"))
+            let mlMultiArray1 = try decoded.mlMultiArray(forKey: "test1")
             #expect(mlMultiArray1.shape == [2, 2])
             #expect(mlMultiArray1.dataType == .int32)
             #expect(mlMultiArray1[[0, 0] as [NSNumber]] == 1)
@@ -70,7 +69,7 @@
             #expect(mlMultiArray1[[1, 0] as [NSNumber]] == 3)
             #expect(mlMultiArray1[[1, 1] as [NSNumber]] == 4)
 
-            let mlMultiArray2 = try #require(try decoded.mlMultiArray(forKey: "test2"))
+            let mlMultiArray2 = try decoded.mlMultiArray(forKey: "test2")
             #expect(mlMultiArray2.shape == [5])
             #expect(mlMultiArray2.dataType == .float32)
             #expect(mlMultiArray2[[0] as [NSNumber]] == 2)

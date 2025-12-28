@@ -1,4 +1,4 @@
-#if canImport(Testing)
+#if canImport(Testing) && canImport(CoreML)
     import CoreML
     import Foundation
     import Testing
