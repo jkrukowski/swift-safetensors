@@ -14,7 +14,7 @@
             let safeTensors = try Safetensors.decode(data)
             let testTensor = try safeTensors.tensorData(forKey: "test")
 
-            #expect(testTensor.dtype == "I32")
+            #expect(testTensor.dtype == .int32)
             #expect(testTensor.shape == [2, 2])
             #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
             #expect(safeTensors.metadata == nil)
@@ -29,7 +29,7 @@
             let safeTensors = try Safetensors.decode(data)
             let testTensor = try safeTensors.tensorData(forKey: "test")
 
-            #expect(testTensor.dtype == "I32")
+            #expect(testTensor.dtype == .int32)
             #expect(testTensor.shape == [2, 2])
             #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
             #expect(safeTensors.metadata == ["key1": "value1", "key2": "value2"])
@@ -44,7 +44,7 @@
             let safeTensors = try Safetensors.decode(data)
             let testTensor = try safeTensors.tensorData(forKey: "test")
 
-            #expect(testTensor.dtype == "I32")
+            #expect(testTensor.dtype == .int32)
             #expect(testTensor.shape == [2, 2])
             #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
             #expect(safeTensors.metadata == nil)
@@ -56,7 +56,7 @@
             let safeTensors = try Safetensors.read(at: fileUrl)
             let testTensor: TensorData = try safeTensors.tensorData(forKey: "test")
 
-            #expect(testTensor.dtype == "I32")
+            #expect(testTensor.dtype == .int32)
             #expect(testTensor.shape == [2, 2])
             #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
 
@@ -95,7 +95,7 @@
             let safeTensors = try Safetensors.decode(data)
             let testTensor = try safeTensors.tensorData(forKey: "test")
 
-            #expect(testTensor.dtype == "I32")
+            #expect(testTensor.dtype == .int32)
             #expect(testTensor.shape == [])
             #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 4))
         }
@@ -108,9 +108,23 @@
             let safeTensors = try Safetensors.decode(data)
             let testTensor = try safeTensors.tensorData(forKey: "test")
 
-            #expect(testTensor.dtype == "I32")
+            #expect(testTensor.dtype == .int32)
             #expect(testTensor.shape == [])
             #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 0))
+        }
+
+        @Test func notSupportedDataTypeAreAllowed() throws {
+            let data = createRawSafetensors(
+                headerString:
+                    #"{"test":{"dtype":"X32","shape":[2,2],"data_offsets":[0,16]},"__metadata__":null}"#,
+                tensorData: Data([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+            )
+            let safeTensors = try Safetensors.decode(data)
+            let testTensor = try safeTensors.tensorData(forKey: "test")
+
+            #expect(testTensor.dtype == .notSupported("X32"))
+            #expect(testTensor.shape == [2, 2])
+            #expect(testTensor.dataOffsets == OffsetRange(start: 0, end: 16))
         }
 
         @Test func metadataWrongKey() throws {
@@ -192,6 +206,86 @@
             #expect(throws: Swift.DecodingError.self) {
                 _ = try Safetensors.decode(data3)
             }
+        }
+
+        @Test func convertToDataTypeTests() throws {
+            try #expect(DataType(Float.self) == .float32)
+            try #expect(DataType(Double.self) == .float64)
+            try #expect(DataType(Float.self) == .float32)
+            try #expect(DataType(Float64.self) == .float64)
+            try #expect(DataType(Float16.self) == .float16)
+            try #expect(DataType(Int8.self) == .int8)
+            try #expect(DataType(Int16.self) == .int16)
+            try #expect(DataType(Int32.self) == .int32)
+            try #expect(DataType(Int64.self) == .int64)
+            try #expect(DataType(UInt8.self) == .uint8)
+            try #expect(DataType(UInt16.self) == .uint16)
+            try #expect(DataType(UInt32.self) == .uint32)
+            try #expect(DataType(UInt64.self) == .uint64)
+            try #expect(DataType(Bool.self) == .bool)
+        }
+
+        @Test func builderEncode() throws {
+            let builder = SafetensorsBuilder()
+                .addTensor(
+                    MLMultiArray(MLShapedArray<Int32>(scalars: [1, 2, 3, 4], shape: [2, 2])),
+                    forKey: "test1"
+                )
+                .addTensor(
+                    MLMultiArray(MLShapedArray<Float32>(repeating: 2, shape: [5])), forKey: "test2"
+                )
+                .withMetadata(["key1": "value1", "key2": "value2"])
+
+            let encoded = try builder.encode()
+            let data = try #require(encoded.singleData)
+            let decoded = try Safetensors.decode(data)
+
+            #expect(decoded.metadata == ["key1": "value1", "key2": "value2"])
+
+            // Keys should only include tensor names, not __metadata__
+            let tensorKeys = decoded.keys.filter { $0 != "__metadata__" }
+            #expect(tensorKeys.sorted() == ["test1", "test2"])
+
+            let tensor1 = try decoded.tensorData(forKey: "test1")
+            #expect(tensor1.dtype == .int32)
+            #expect(tensor1.shape == [2, 2])
+
+            let tensor2 = try decoded.tensorData(forKey: "test2")
+            #expect(tensor2.dtype == .float32)
+            #expect(tensor2.shape == [5])
+        }
+
+        @Test func builderEncodeWithSharding() throws {
+            let builder = SafetensorsBuilder()
+                .addTensor(
+                    MLMultiArray(MLShapedArray<Int32>(repeating: 1, shape: [2, 2])),
+                    forKey: "small1"
+                )
+                .addTensor(
+                    MLMultiArray(MLShapedArray<Int32>(repeating: 4, shape: [20, 20])),
+                    forKey: "large1"
+                )
+                .addTensor(
+                    MLMultiArray(MLShapedArray<Float>(repeating: 3, shape: [10, 10])),
+                    forKey: "medium"
+                )
+                .withMetadata(["test_key": "test_value"])
+                .withMaxShardingSize(2_000)
+
+            let encoded = try builder.encode()
+
+            // Should be sharded
+            guard case .sharded(let shardedData) = encoded else {
+                Issue.record("Expected sharded encoding")
+                return
+            }
+
+            #expect(shardedData.shards.count > 1)
+            #expect(shardedData.totalSize == 2_016)  // (4*4) + (400*4) + (100*4)
+
+            // Verify all tensors are accounted for
+            let allTensorNames = shardedData.tensorNames.flatMap { $0 }
+            #expect(Set(allTensorNames) == Set(["small1", "large1", "medium"]))
         }
     }
 #endif

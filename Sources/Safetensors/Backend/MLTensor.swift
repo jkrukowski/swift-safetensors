@@ -4,38 +4,6 @@
 
     // NOTE: Right now `MLTensor` does not conform to `SafetensorsEncodable`.
 
-    @available(macOS 15.0, macCatalyst 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
-    extension MLTensor {
-        static func toMLTensorScalarType(from dtype: String) throws -> MLTensorScalar.Type {
-            switch dtype {
-            case Constants.DataType.float32:
-                return Float32.self
-            case Constants.DataType.float16:
-                #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
-                    return Float16.self
-                #else
-                    throw Safetensors.Error.unsupportedDataType(dtype)
-                #endif
-            case Constants.DataType.int32:
-                return Int32.self
-            case Constants.DataType.uint32:
-                return UInt32.self
-            case Constants.DataType.int16:
-                return Int16.self
-            case Constants.DataType.uint16:
-                return UInt16.self
-            case Constants.DataType.int8:
-                return Int8.self
-            case Constants.DataType.uint8:
-                return UInt8.self
-            case Constants.DataType.bool:
-                return Bool.self
-            default:
-                throw Safetensors.Error.unsupportedDataType(dtype)
-            }
-        }
-    }
-
     extension ParsedSafetensors {
         /// Get the MLTensor for the given key.
         /// - Parameters:
@@ -45,7 +13,7 @@
         @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
         public func mlTensor(forKey key: String, noCopy: Bool = false) throws -> MLTensor {
             let tensorData = try tensorData(forKey: key)
-            let scalarType = try MLTensor.toMLTensorScalarType(from: tensorData.dtype)
+            let scalarType = try tensorData.dtype.toMLTensorScalarType()
             let startIndex = tensorData.dataOffsets.start + headerOffset
             let endIndex = tensorData.dataOffsets.end + headerOffset
             let count = endIndex - startIndex

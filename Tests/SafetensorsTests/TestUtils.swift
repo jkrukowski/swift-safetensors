@@ -42,6 +42,18 @@ func writeToTemporaryFile(
     return fileURL
 }
 
+extension EncodedSafetensors {
+    /// Get the single Data if this is not sharded, otherwise returns nil
+    var singleData: Data? {
+        switch self {
+        case .single(let data):
+            return data
+        case .sharded:
+            return nil
+        }
+    }
+}
+
 final class TestTensor: SafetensorsEncodable {
     let size: Int
     let shape: [Int]
@@ -59,8 +71,8 @@ final class TestTensor: SafetensorsEncodable {
         shape
     }
 
-    var dtype: String {
-        Constants.DataType.float32
+    var dtype: DataType {
+        .float32
     }
 
     var scalarSize: Int {

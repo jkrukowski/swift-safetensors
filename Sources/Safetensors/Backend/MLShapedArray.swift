@@ -11,17 +11,17 @@
             shape
         }
 
-        public var dtype: String {
+        public var dtype: DataType {
             get throws {
                 switch Self.Scalar.multiArrayDataType {
                 case .float64:
-                    return Constants.DataType.float64
+                    return .float64
                 case .float32:
-                    return Constants.DataType.float32
+                    return .float32
                 case .float16:
-                    return Constants.DataType.float16
+                    return .float16
                 case .int32:
-                    return Constants.DataType.int32
+                    return .int32
                 default:
                     throw Safetensors.Error.unsupportedDataType(
                         String(describing: Self.Scalar.multiArrayDataType.rawValue))
@@ -92,7 +92,7 @@
             noCopy: Bool = false
         ) throws -> MLShapedArray<Scalar> {
             let tensorData = try tensorData(forKey: key)
-            let dataType = try toMLMultiArrayDataType(from: tensorData.dtype)
+            let dataType = try tensorData.dtype.toMLMultiArrayDataType()
             if dataType != Scalar.multiArrayDataType {
                 throw Safetensors.Error.dataTypeMismatch
             }

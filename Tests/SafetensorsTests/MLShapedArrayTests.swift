@@ -11,27 +11,27 @@
             #expect(array1.tensorScalarCount == 2 * 3)
             #expect(array1.tensorShape == [2, 3])
             #expect(try array1.scalarSize == 4)
-            #expect(try array1.dtype == "I32")
+            #expect(try array1.dtype == .int32)
 
             if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
                 let array2 = MLShapedArray<Float16>(repeating: 1, shape: [2, 3])
                 #expect(array2.tensorScalarCount == 2 * 3)
                 #expect(array2.tensorShape == [2, 3])
                 #expect(try array2.scalarSize == 2)
-                #expect(try array2.dtype == "F16")
+                #expect(try array2.dtype == .float16)
             }
 
             let array3 = MLShapedArray<Float32>(repeating: 1, shape: [2, 3])
             #expect(array3.tensorScalarCount == 2 * 3)
             #expect(array3.tensorShape == [2, 3])
             #expect(try array3.scalarSize == 4)
-            #expect(try array3.dtype == "F32")
+            #expect(try array3.dtype == .float32)
 
             let array4 = MLShapedArray<Float64>(repeating: 1, shape: [2, 3])
             #expect(array4.tensorScalarCount == 2 * 3)
             #expect(array4.tensorShape == [2, 3])
             #expect(try array4.scalarSize == 8)
-            #expect(try array4.dtype == "F64")
+            #expect(try array4.dtype == .float64)
         }
 
         @Test func decodeRaw() throws {
@@ -56,7 +56,9 @@
                 "test2": MLShapedArray<Float32>(repeating: 2, shape: [5]),
             ]
             let decoded = try Safetensors.decode(
-                Safetensors.encode(data, metadata: ["key1": "value1", "key2": "value2"])
+                try #require(
+                    Safetensors.encode(data, metadata: ["key1": "value1", "key2": "value2"])
+                        .singleData)
             )
 
             #expect(decoded.metadata == ["key1": "value1", "key2": "value2"])

@@ -11,7 +11,7 @@
             forKey key: String
         ) throws -> InlineArray<count, Element> {
             let tensorData = try tensorData(forKey: key)
-            let expectedType = try toArrayDataType(from: tensorData.dtype)
+            let expectedType = try tensorData.dtype.toArrayDataType()
             guard expectedType == Element.self else {
                 throw Safetensors.Error.dataTypeMismatch
             }

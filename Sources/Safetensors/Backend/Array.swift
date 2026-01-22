@@ -5,7 +5,7 @@ extension ParsedSafetensors {
     /// - Returns: the array for the given key
     public func array<Element>(forKey key: String) throws -> [Element] {
         let tensorData = try tensorData(forKey: key)
-        let expectedType = try toArrayDataType(from: tensorData.dtype)
+        let expectedType = try tensorData.dtype.toArrayDataType()
         guard expectedType == Element.self else {
             throw Safetensors.Error.dataTypeMismatch
         }

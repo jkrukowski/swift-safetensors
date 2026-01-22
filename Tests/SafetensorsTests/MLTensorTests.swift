@@ -29,7 +29,9 @@
                 "test2": MLMultiArray(MLShapedArray<Float32>(repeating: 2, shape: [5])),
             ]
             let decoded = try Safetensors.decode(
-                Safetensors.encode(data, metadata: ["key1": "value1", "key2": "value2"])
+                try #require(
+                    Safetensors.encode(data, metadata: ["key1": "value1", "key2": "value2"])
+                        .singleData)
             )
 
             #expect(decoded.metadata == ["key1": "value1", "key2": "value2"])

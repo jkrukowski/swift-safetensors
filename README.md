@@ -80,6 +80,7 @@ finish using the `MLTensor`, `MLMultiArray` or `MLShapedArray`.
 ### Write `Safetensors` file
 
 ```swift
+import CoreML
 import Safetensors
 
 let data: [String: any SafetensorsEncodable] = [
@@ -94,10 +95,25 @@ try Safetensors.write(
 )
 ```
 
+You can also use the `SafetensorsBuilder` to write `Safetensors` file:
+
+```swift
+import CoreML
+import Safetensors
+
+let builder = SafetensorsBuilder()
+    .addTensor(MLShapedArray<Int32>(repeating: 1, shape: [2, 2]), forKey: "test1")
+    .addTensor(MLShapedArray<Float32>(repeating: 2, shape: [9]), forKey: "test2")
+    .withMetadata(["key1": "value1", "key2": "value2"])
+    .withMaxShardingSize(1_000_000)
+
+try builder.write(to: URL(filePath: "path/to/file.safetensors"))
+```
+
 ## Code Formatting
 
 This project uses [swift-format](https://github.com/swiftlang/swift-format). To format the code run:
 
 ```bash
-swift-format format . -i -r --configuration .swift-format
+swift format format . -i -r --configuration .swift-format
 ```

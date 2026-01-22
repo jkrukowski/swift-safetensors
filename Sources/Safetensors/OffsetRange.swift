@@ -10,7 +10,12 @@ public struct OffsetRange: Equatable, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let array = try container.decode([Int].self)
-        precondition(array.count == 2, "Range array needs to have exactly 2 elements")
+        if array.count != 2 {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Range array needs to have exactly 2 elements"))
+        }
         self.start = array[0]
         self.end = array[1]
     }

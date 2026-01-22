@@ -11,17 +11,17 @@
             shape.map { $0.intValue }
         }
 
-        public var dtype: String {
+        public var dtype: DataType {
             get throws {
                 switch dataType {
                 case .float64:
-                    return Constants.DataType.float64
+                    return .float64
                 case .float32:
-                    return Constants.DataType.float32
+                    return .float32
                 case .float16:
-                    return Constants.DataType.float16
+                    return .float16
                 case .int32:
-                    return Constants.DataType.int32
+                    return .int32
                 default:
                     throw Safetensors.Error.unsupportedDataType(
                         String(describing: dataType.rawValue))
@@ -88,7 +88,7 @@
         /// - Returns: the MLMultiArray for the given key
         public func mlMultiArray(forKey key: String, noCopy: Bool = false) throws -> MLMultiArray {
             let tensorData = try tensorData(forKey: key)
-            let dataType = try toMLMultiArrayDataType(from: tensorData.dtype)
+            let dataType = try tensorData.dtype.toMLMultiArrayDataType()
             let startIndex = tensorData.dataOffsets.start + headerOffset
             let endIndex = tensorData.dataOffsets.end + headerOffset
             let count = endIndex - startIndex

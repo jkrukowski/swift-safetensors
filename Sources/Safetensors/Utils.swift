@@ -1,74 +1,17 @@
-import Foundation
-
-#if canImport(CoreML)
-    import CoreML
-
-    func toMLMultiArrayDataType(from dtype: String) throws -> MLMultiArrayDataType {
-        switch dtype {
-        case Constants.DataType.float64:
-            return .float64
-        case Constants.DataType.float32:
-            return .float32
-        case Constants.DataType.float16:
-            #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
-                return .float16
-            #else
-                throw Safetensors.Error.unsupportedDataType(dtype)
-            #endif
-        case Constants.DataType.int32:
-            return .int32
-        default:
-            throw Safetensors.Error.unsupportedDataType(dtype)
-        }
-    }
-#endif
-
-func toArrayDataType(from dtype: String) throws -> Any.Type {
-    switch dtype {
-    case Constants.DataType.float64:
-        return Double.self
-    case Constants.DataType.float32:
-        return Float.self
-    case Constants.DataType.float16:
-        #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
-            return Float16.self
-        #else
-            throw Safetensors.Error.unsupportedDataType(dtype)
-        #endif
-    case Constants.DataType.int32:
-        return Int32.self
-    case Constants.DataType.uint32:
-        return UInt32.self
-    case Constants.DataType.int16:
-        return Int16.self
-    case Constants.DataType.uint16:
-        return UInt16.self
-    case Constants.DataType.int8:
-        return Int8.self
-    case Constants.DataType.uint8:
-        return UInt8.self
-    case Constants.DataType.bool:
-        return Bool.self
-    default:
-        throw Safetensors.Error.unsupportedDataType(dtype)
-    }
-}
-
 enum Constants {
     static let metadataKey = "__metadata__"
-
-    enum DataType {
-        static let float64 = "F64"
-        static let float32 = "F32"
-        static let float16 = "F16"
-        static let int32 = "I32"
-        static let uint32 = "U32"
-        static let int16 = "I16"
-        static let uint16 = "U16"
-        static let int8 = "I8"
-        static let uint8 = "U8"
-        static let bool = "BOOL"
-    }
+    static let F64 = "F64"
+    static let F32 = "F32"
+    static let F16 = "F16"
+    static let I64 = "I64"
+    static let U64 = "U64"
+    static let I32 = "I32"
+    static let U32 = "U32"
+    static let I16 = "I16"
+    static let U16 = "U16"
+    static let I8 = "I8"
+    static let U8 = "U8"
+    static let BOOL = "BOOL"
 }
 
 extension String {

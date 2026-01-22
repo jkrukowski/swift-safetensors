@@ -16,7 +16,7 @@
             ]
 
             // Group with a max shard size of 500 bytes
-            let groups = try groupsForSharding(tensors, maxShardSizeInBytes: 500)
+            let groups = try Safetensors.groupsForSharding(tensors, maxShardSizeInBytes: 500)
 
             // Should create 3 groups:
             // Group 1: tensor4 = 400 bytes
@@ -51,7 +51,7 @@
             ]
 
             // Group with a max shard size of 500 bytes
-            let groups = try groupsForSharding(tensors, maxShardSizeInBytes: 500)
+            let groups = try Safetensors.groupsForSharding(tensors, maxShardSizeInBytes: 500)
 
             // Should create three groups:
             // Group 1: large = 1000 bytes (exceeds max size but must be in its own group)
@@ -79,7 +79,7 @@
         @Test func groupsForShardingEmptyInput() throws {
             let tensors: [String: SafetensorsEncodable] = [:]
 
-            let groups = try groupsForSharding(tensors, maxShardSizeInBytes: 500)
+            let groups = try Safetensors.groupsForSharding(tensors, maxShardSizeInBytes: 500)
 
             #expect(groups.isEmpty)
         }
@@ -89,7 +89,7 @@
                 "tensor1": TestTensor(size: 100, shape: [5, 5, 4])
             ]
 
-            let groups = try groupsForSharding(tensors, maxShardSizeInBytes: 500)
+            let groups = try Safetensors.groupsForSharding(tensors, maxShardSizeInBytes: 500)
 
             #expect(groups.count == 1)
             #expect(groups[0].count == 1)
@@ -113,7 +113,7 @@
             let large2Id = ObjectIdentifier(large2)
 
             // Group with a max shard size that forces separation
-            let groups = try groupsForSharding(tensors, maxShardSizeInBytes: 1_500_000)
+            let groups = try Safetensors.groupsForSharding(tensors, maxShardSizeInBytes: 1_500_000)
 
             // Should create two groups with one tensor each
             #expect(groups.count == 2)
@@ -184,7 +184,7 @@
             // Set small max shard size to force multiple shards
             let maxShardSizeBytes = 2_000
             try Safetensors.write(
-                data, metadata: metadata, to: fileURL, maxShardSizeInBytes: maxShardSizeBytes)
+                data, metadata: metadata, maxShardSizeInBytes: maxShardSizeBytes, to: fileURL)
 
             let indexURL = tempDirectory.appendingPathComponent("model.index.json")
             let shardURLs = [
@@ -222,7 +222,7 @@
             #expect(parsedIndex.metadata?.totalSize == 3_632)
 
             let tensorData1 = try parsedIndex.tensorData(forKey: "small1", baseURL: tempDirectory)
-            #expect(tensorData1.dtype == "I32")
+            #expect(tensorData1.dtype == .int32)
             #expect(tensorData1.shape == [2, 2])
             #expect(
                 try parsedIndex
@@ -231,7 +231,7 @@
             )
 
             let tensorData2 = try parsedIndex.tensorData(forKey: "small2", baseURL: tempDirectory)
-            #expect(tensorData2.dtype == "I32")
+            #expect(tensorData2.dtype == .int32)
             #expect(tensorData2.shape == [2, 2])
             #expect(
                 try parsedIndex
@@ -240,7 +240,7 @@
             )
 
             let tensorData3 = try parsedIndex.tensorData(forKey: "medium", baseURL: tempDirectory)
-            #expect(tensorData3.dtype == "F32")
+            #expect(tensorData3.dtype == .float32)
             #expect(tensorData3.shape == [10, 10])
             #expect(
                 try parsedIndex
@@ -249,7 +249,7 @@
             )
 
             let tensorData4 = try parsedIndex.tensorData(forKey: "large1", baseURL: tempDirectory)
-            #expect(tensorData4.dtype == "I32")
+            #expect(tensorData4.dtype == .int32)
             #expect(tensorData4.shape == [20, 20])
             #expect(
                 try parsedIndex
@@ -258,7 +258,7 @@
             )
 
             let tensorData5 = try parsedIndex.tensorData(forKey: "large2", baseURL: tempDirectory)
-            #expect(tensorData5.dtype == "F32")
+            #expect(tensorData5.dtype == .float32)
             #expect(tensorData5.shape == [20, 20])
             #expect(
                 try parsedIndex

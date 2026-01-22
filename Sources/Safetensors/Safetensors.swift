@@ -42,7 +42,6 @@ extension Safetensors {
     /// - Parameter url: file URL to read the data from
     /// - Returns: `ParsedSafetensors` object containing the decoded data
     public static func read(at url: URL) throws -> ParsedSafetensors {
-        precondition(url.isFileURL, "URL must be a file URL")
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
         return try decode(data)
     }
@@ -51,7 +50,6 @@ extension Safetensors {
     /// - Parameter url: file URL to read the data from
     /// - Returns: `ParsedSafetensorsIndex` object containing the decoded data
     public static func readFromIndex(at url: URL) throws -> ParsedSafetensorsIndex {
-        precondition(url.isFileURL, "URL must be a file URL")
         let data = try Data(contentsOf: url)
         let indexData = try decodeIndex(data)
         return ParsedSafetensorsIndex(
@@ -102,50 +100,24 @@ extension Safetensors {
     /// - Parameters:
     ///   - data: dictionary of `SafetensorsEncodable` values
     ///   - metadata: optional metadata dictionary to include in the encoded data
-    ///   - url: file URL to save the data to
     ///   - maxShardSizeInBytes: optional maximum size of each shard in bytes
+    ///   - url: file URL to save the data to
     public static func write(
         _ data: [String: any SafetensorsEncodable],
         metadata: [String: String]? = nil,
-        to url: URL,
-        maxShardSizeInBytes: Int? = nil
+        maxShardSizeInBytes: Int? = nil,
+        to url: URL
     ) throws {
-        precondition(url.isFileURL, "URL must be a file URL")
-        if let maxShardSizeInBytes {
-            precondition(maxShardSizeInBytes > 0, "Maximum shard size must be greater than 0")
-            let groups = try groupsForSharding(data, maxShardSizeInBytes: maxShardSizeInBytes)
-            let directoryURL = url.deletingLastPathComponent()
-            let baseFileName = url.deletingPathExtension().lastPathComponent
-            let fileExtension = url.pathExtension
-            var totalSize = 0
-            var weightMap = [String: String]()
-            var shardSuffix = "\(groups.count)"
-            if shardSuffix.count < 5 {
-                shardSuffix = shardSuffix.zfill(5)
-            }
-            for (index, group) in groups.enumerated() {
-                let encodedData = try encode(group, metadata: metadata)
-                let shardPrefix = "\(index + 1)".zfill(shardSuffix.count)
-                let shardFileName =
-                    "\(baseFileName)-\(shardPrefix)-of-\(shardSuffix).\(fileExtension)"
-                try encodedData.write(to: directoryURL.appendingPathComponent(shardFileName))
-                for (weightKey, value) in group {
-                    weightMap[weightKey] = shardFileName
-                    totalSize += try value.tensorByteCount
-                }
-            }
-            let modelIndex = ParsedSafetensorsIndexData(
-                metadata: ParsedSafetensorsIndexData.Metadata(totalSize: totalSize),
-                weightMap: weightMap
-            )
-            let encoder = JSONEncoder()
-            encoder.keyEncodingStrategy = .convertToSnakeCase
-            let encodedIndex = try encoder.encode(modelIndex)
-            try encodedIndex.write(
-                to: directoryURL.appendingPathComponent("\(baseFileName).index.json"))
-        } else {
-            let encodedData = try encode(data, metadata: metadata)
-            try encodedData.write(to: url)
+        let encodedData = try encode(
+            data,
+            metadata: metadata,
+            maxShardSizeInBytes: maxShardSizeInBytes
+        )
+        switch encodedData {
+        case .single(let data):
+            try data.write(to: url)
+        case .sharded(let shardedData):
+            try shardedData.write(to: url)
         }
     }
 
@@ -153,10 +125,48 @@ extension Safetensors {
     /// - Parameters:
     ///   - data: dictionary of `SafetensorsEncodable` values
     ///   - metadata: optional metadata dictionary to include in the encoded data
+    ///   - maxShardSizeInBytes: optional maximum size of each shard in bytes
     /// - Returns: `Data` object containing the encoded data
     public static func encode(
         _ data: [String: any SafetensorsEncodable],
-        metadata: [String: String]? = nil
+        metadata: [String: String]? = nil,
+        maxShardSizeInBytes: Int? = nil
+    ) throws -> EncodedSafetensors {
+        if let maxShardSizeInBytes {
+            precondition(maxShardSizeInBytes > 0, "Maximum shard size must be greater than 0")
+            let groups = try groupsForSharding(data, maxShardSizeInBytes: maxShardSizeInBytes)
+            var filesData = [Data]()
+            var tensorNames = [[String]]()
+            var totalSize = 0
+            filesData.reserveCapacity(groups.count)
+            tensorNames.reserveCapacity(groups.count)
+            for group in groups {
+                try filesData.append(encodeSafetensors(group, metadata: metadata))
+                var shardTensorNames = [String]()
+                shardTensorNames.reserveCapacity(group.count)
+                for (key, value) in group {
+                    shardTensorNames.append(key)
+                    totalSize += try value.tensorByteCount
+                }
+                tensorNames.append(shardTensorNames)
+            }
+            let shardedData = ShardedData(
+                shards: filesData,
+                tensorNames: tensorNames,
+                totalSize: totalSize
+            )
+            return .sharded(shardedData)
+        } else {
+            let encodedData = try encodeSafetensors(data, metadata: metadata)
+            return .single(encodedData)
+        }
+    }
+}
+
+extension Safetensors {
+    static func encodeSafetensors(
+        _ data: [String: any SafetensorsEncodable],
+        metadata: [String: String]?
     ) throws -> Data {
         var headerData = [String: HeaderElement]()
         headerData.reserveCapacity(data.count + (metadata == nil ? 0 : 1))
@@ -188,34 +198,34 @@ extension Safetensors {
         let headerSize = withUnsafeBytes(of: UInt64(header.count)) { Data($0) }
         return headerSize + header + tensorData
     }
-}
 
-func groupsForSharding(
-    _ data: [String: any SafetensorsEncodable],
-    maxShardSizeInBytes: Int
-) throws -> [[String: any SafetensorsEncodable]] {
-    let sortedData = try data.sorted { try $0.value.tensorByteCount > $1.value.tensorByteCount }
-    var groups = [[String: any SafetensorsEncodable]]()
-    var currentGroup = [String: any SafetensorsEncodable]()
-    var currentSize = 0
-    for item in sortedData {
-        let tensorByteCount = try item.value.tensorByteCount
-        if tensorByteCount > maxShardSizeInBytes {
-            // If this tensor is larger than max shard size, it gets its own group
-            groups.append([item.key: item.value])
-            currentGroup = [:]
-            currentSize = 0
-        } else if currentSize + tensorByteCount > maxShardSizeInBytes {
-            groups.append(currentGroup)
-            currentGroup = [item.key: item.value]
-            currentSize = tensorByteCount
-        } else {
-            currentGroup[item.key] = item.value
-            currentSize += tensorByteCount
+    static func groupsForSharding(
+        _ data: [String: any SafetensorsEncodable],
+        maxShardSizeInBytes: Int
+    ) throws -> [[String: any SafetensorsEncodable]] {
+        let sortedData = try data.sorted { try $0.value.tensorByteCount > $1.value.tensorByteCount }
+        var groups = [[String: any SafetensorsEncodable]]()
+        var currentGroup = [String: any SafetensorsEncodable]()
+        var currentSize = 0
+        for item in sortedData {
+            let tensorByteCount = try item.value.tensorByteCount
+            if tensorByteCount > maxShardSizeInBytes {
+                // If this tensor is larger than max shard size, it gets its own group
+                groups.append([item.key: item.value])
+                currentGroup = [:]
+                currentSize = 0
+            } else if currentSize + tensorByteCount > maxShardSizeInBytes {
+                groups.append(currentGroup)
+                currentGroup = [item.key: item.value]
+                currentSize = tensorByteCount
+            } else {
+                currentGroup[item.key] = item.value
+                currentSize += tensorByteCount
+            }
         }
+        if !currentGroup.isEmpty {
+            groups.append(currentGroup)
+        }
+        return groups
     }
-    if !currentGroup.isEmpty {
-        groups.append(currentGroup)
-    }
-    return groups
 }
