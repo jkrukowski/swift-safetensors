@@ -110,14 +110,16 @@ extension DataType: Equatable {
 }
 
 extension DataType {
-    public init(_ type: Any.Type) throws {
+    public init(_ type: Any.Type) {
         switch type {
         case is Float64.Type:
             self = .float64
         case is Float32.Type:
             self = .float32
-        case is Float16.Type:
-            self = .float16
+        #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+            case is Float16.Type:
+                self = .float16
+        #endif
         case is Int64.Type:
             self = .int64
         case is UInt64.Type:

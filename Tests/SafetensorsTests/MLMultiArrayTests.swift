@@ -13,13 +13,15 @@
             #expect(try array1.scalarSize == 4)
             #expect(try array1.dtype == .int32)
 
-            if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
-                let array2 = MLMultiArray(MLShapedArray<Float16>(repeating: 1, shape: [2, 3]))
-                #expect(array2.tensorScalarCount == 2 * 3)
-                #expect(array2.tensorShape == [2, 3])
-                #expect(try array2.scalarSize == 2)
-                #expect(try array2.dtype == .float16)
-            }
+            #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+                if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
+                    let array2 = MLMultiArray(MLShapedArray<Float16>(repeating: 1, shape: [2, 3]))
+                    #expect(array2.tensorScalarCount == 2 * 3)
+                    #expect(array2.tensorShape == [2, 3])
+                    #expect(try array2.scalarSize == 2)
+                    #expect(try array2.dtype == .float16)
+                }
+            #endif
 
             let array3 = MLMultiArray(MLShapedArray<Float32>(repeating: 1, shape: [2, 3]))
             #expect(array3.tensorScalarCount == 2 * 3)

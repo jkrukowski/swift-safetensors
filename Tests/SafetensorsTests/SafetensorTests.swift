@@ -208,21 +208,23 @@
             }
         }
 
-        @Test func convertToDataTypeTests() throws {
-            try #expect(DataType(Float.self) == .float32)
-            try #expect(DataType(Double.self) == .float64)
-            try #expect(DataType(Float.self) == .float32)
-            try #expect(DataType(Float64.self) == .float64)
-            try #expect(DataType(Float16.self) == .float16)
-            try #expect(DataType(Int8.self) == .int8)
-            try #expect(DataType(Int16.self) == .int16)
-            try #expect(DataType(Int32.self) == .int32)
-            try #expect(DataType(Int64.self) == .int64)
-            try #expect(DataType(UInt8.self) == .uint8)
-            try #expect(DataType(UInt16.self) == .uint16)
-            try #expect(DataType(UInt32.self) == .uint32)
-            try #expect(DataType(UInt64.self) == .uint64)
-            try #expect(DataType(Bool.self) == .bool)
+        @Test func convertToDataTypeTests() {
+            #expect(DataType(Float.self) == .float32)
+            #expect(DataType(Double.self) == .float64)
+            #expect(DataType(Float.self) == .float32)
+            #expect(DataType(Float64.self) == .float64)
+            #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+                #expect(DataType(Float16.self) == .float16)
+            #endif
+            #expect(DataType(Int8.self) == .int8)
+            #expect(DataType(Int16.self) == .int16)
+            #expect(DataType(Int32.self) == .int32)
+            #expect(DataType(Int64.self) == .int64)
+            #expect(DataType(UInt8.self) == .uint8)
+            #expect(DataType(UInt16.self) == .uint16)
+            #expect(DataType(UInt32.self) == .uint32)
+            #expect(DataType(UInt64.self) == .uint64)
+            #expect(DataType(Bool.self) == .bool)
         }
 
         @Test func builderEncode() throws {

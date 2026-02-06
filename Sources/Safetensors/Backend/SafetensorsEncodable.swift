@@ -50,8 +50,8 @@ public struct AnySafetensorsEncodable: SafetensorsEncodable {
         scalarSize: Int,
         tensorByteCount: Int,
         data: Data
-    ) throws {
-        try self.init(
+    ) {
+        self.init(
             tensorScalarCount: tensorScalarCount,
             tensorShape: tensorShape,
             dtype: DataType(type),
